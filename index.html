@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OKR Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos para la barra de progreso */
+        .progress-bar-bg {
+            background-color: #4a5568; /* gray-700 */
+        }
+        .progress-bar-fill {
+            background-color: #48bb78; /* green-500 */
+            transition: width 0.3s ease-in-out;
+        }
+        /* Animación para el modal */
+        .modal-enter {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        .modal-enter-active {
+            opacity: 1;
+            transform: scale(1);
+            transition: opacity 300ms, transform 300ms;
+        }
+        .modal-leave {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .modal-leave-active {
+            opacity: 0;
+            transform: scale(0.95);
+            transition: opacity 300ms, transform 300ms;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 font-sans antialiased">
+
+    <div id="app" class="container mx-auto max-w-2xl p-4">
+
+        <!-- Header -->
+        <header class="mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-3xl font-bold text-white">Mis OKRs</h1>
+                <div class="flex items-center space-x-2">
+                    <input type="number" id="year-input" class="bg-gray-800 border border-gray-700 rounded px-2 py-1 w-20 text-center">
+                    <select id="quarter-input" class="bg-gray-800 border border-gray-700 rounded px-2 py-1">
+                        <option value="1">Q1</option>
+                        <option value="2">Q2</option>
+                        <option value="3">Q3</option>
+                        <option value="4">Q4</option>
+                    </select>
+                </div>
+            </div>
+            <div class="bg-gray-800 p-4 rounded-lg shadow-md">
+                <h2 class="text-lg font-semibold mb-2 text-gray-400">Progreso General del Q</h2>
+                <div id="overall-progress-container" class="text-center">
+                    <!-- El progreso general se renderizará aquí -->
+                </div>
+            </div>
+        </header>
+
+        <!-- Botón para añadir objetivo -->
+        <div class="mb-6">
+            <button id="add-objective-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg focus:outline-none focus:shadow-outline transition-transform transform hover:scale-105">
+                + Añadir Nuevo Objetivo
+            </button>
+        </div>
+
+        <!-- Contenedor de Objetivos -->
+        <main id="objectives-container">
+            <!-- Los objetivos se renderizarán aquí -->
+        </main>
+        
+        <!-- Footer para Import/Export -->
+        <footer class="mt-8 border-t border-gray-700 pt-6">
+            <h2 class="text-xl font-semibold mb-4 text-center text-gray-400">Gestión de Datos</h2>
+            <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                <button id="export-json-btn" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:shadow-outline">Exportar a JSON</button>
+                <label class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:shadow-outline text-center cursor-pointer">
+                    Importar desde JSON
+                    <input type="file" id="import-json-input" class="hidden" accept=".json">
+                </label>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- Modal para Añadir/Editar Objetivo/KR -->
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 hidden">
+        <div id="modal-content" class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md mx-auto">
+            <h2 id="modal-title" class="text-2xl font-bold mb-6 text-white"></h2>
+            <form id="modal-form">
+                <!-- Inputs dinámicos se añadirán aquí -->
+            </form>
+            <div class="flex justify-end space-x-4 mt-6">
+                <button id="modal-cancel-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Cancelar</button>
+                <button id="modal-save-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">Guardar</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        // --- STATE MANAGEMENT ---
+        const getInitialState = () => {
+            const current_date = new Date();
+            return {
+                currentYear: current_date.getFullYear(),
+                currentQuarter: Math.floor(current_date.getMonth() / 3) + 1,
+                objectives: []
+            }
+        };
+
+        let state = getInitialState();
+
+        const yearInput = document.getElementById('year-input');
+        const quarterInput = document.getElementById('quarter-input');
+
+        const saveData = () => {
+            try {
+                localStorage.setItem('okrData', JSON.stringify(state));
+            } catch (error) {
+                console.error("Error guardando los datos en localStorage:", error);
+                alert("No se pudieron guardar los datos. El almacenamiento podría estar lleno.");
+            }
+        };
+
+        const loadData = () => {
+            const savedData = localStorage.getItem('okrData');
+            if (savedData) {
+                try {
+                    state = JSON.parse(savedData);
+                } catch(e) {
+                    console.error("Error al parsear datos de localStorage, se usarán los valores por defecto.", e);
+                    state = getInitialState();
+                }
+            } else {
+                state = getInitialState();
+            }
+            yearInput.value = state.currentYear;
+            quarterInput.value = state.currentQuarter;
+        };
+        
+        // --- CALCULATIONS ---
+        const calculateKrProgress = (kr) => {
+            if (kr.targetValue === kr.initialValue) return kr.currentValue >= kr.targetValue ? 100 : 0;
+            const progress = ((kr.currentValue - kr.initialValue) / (kr.targetValue - kr.initialValue)) * 100;
+            return Math.max(0, Math.min(100, progress)); // Clamp between 0 and 100
+        };
+
+        const calculateObjectiveProgress = (objective) => {
+            if (objective.keyResults.length === 0) return 0;
+            const totalProgress = objective.keyResults.reduce((sum, kr) => sum + calculateKrProgress(kr), 0);
+            return totalProgress / objective.keyResults.length;
+        };
+
+        const calculateOverallProgress = () => {
+            const objectivesInQuarter = state.objectives.filter(obj => obj.year === state.currentYear && obj.quarter === state.currentQuarter);
+            if (objectivesInQuarter.length === 0) return 0;
+            const totalProgress = objectivesInQuarter.reduce((sum, obj) => sum + calculateObjectiveProgress(obj), 0);
+            return totalProgress / objectivesInQuarter.length;
+        };
+        
+        // --- RENDERING ---
+        const renderProgressBar = (progress, size = 'h-4') => {
+            const percentage = progress.toFixed(2);
+            return `
+                <div class="w-full bg-gray-700 rounded-full ${size}">
+                    <div class="bg-green-500 rounded-full ${size}" style="width: ${percentage}%"></div>
+                </div>
+            `;
+        };
+        
+        const renderOverallProgress = () => {
+            const progress = calculateOverallProgress();
+            const container = document.getElementById('overall-progress-container');
+            container.innerHTML = `
+                <div class="relative w-32 h-32 mx-auto">
+                    <svg class="w-full h-full" viewBox="0 0 36 36">
+                        <path class="text-gray-700"
+                            d="M18 2.0845
+                            a 15.9155 15.9155 0 0 1 0 31.831
+                            a 15.9155 15.9155 0 0 1 0 -31.831"
+                            fill="none" stroke-width="3" />
+                        <path class="text-green-500"
+                            stroke-dasharray="${progress}, 100"
+                            d="M18 2.0845
+                            a 15.9155 15.9155 0 0 1 0 31.831
+                            a 15.9155 15.9155 0 0 1 0 -31.831"
+                            fill="none" stroke-width="3" stroke-linecap="round" />
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-2xl font-bold text-white">${progress.toFixed(0)}%</span>
+                    </div>
+                </div>
+            `;
+        };
+
+        const renderKeyResult = (kr, objectiveIndex) => {
+            const progress = calculateKrProgress(kr);
+            return `
+                <div class="kr-item py-3 px-4 bg-gray-800 rounded-lg mb-2" data-kr-id="${kr.id}">
+                    <div class="flex justify-between items-center mb-2">
+                        <p class="font-semibold text-gray-300">${kr.title}</p>
+                        <div class="flex space-x-3 items-center">
+                            <button data-action="quick-update-kr" data-objective-index="${objectiveIndex}" data-kr-id="${kr.id}" class="bg-indigo-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-xl hover:bg-indigo-600 transition-transform transform hover:scale-110">+</button>
+                             <button data-action="edit-kr" data-objective-index="${objectiveIndex}" data-kr-id="${kr.id}" class="text-gray-400 hover:text-white">✏️</button>
+                            <button data-action="delete-kr" data-objective-index="${objectiveIndex}" data-kr-id="${kr.id}" class="text-gray-400 hover:text-red-500">🗑️</button>
+                        </div>
+                    </div>
+                    <div class="text-sm text-gray-400 mb-2">
+                        <span>${kr.currentValue} / ${kr.targetValue}</span>
+                        <span class="ml-2">(${progress.toFixed(0)}%)</span>
+                    </div>
+                    ${renderProgressBar(progress, 'h-2')}
+                </div>
+            `;
+        };
+
+        const renderObjective = (objective, index) => {
+            const progress = calculateObjectiveProgress(objective);
+            return `
+                <div class="objective-card bg-gray-800/50 backdrop-blur-sm rounded-xl shadow-lg mb-6 p-5" data-objective-id="${objective.id}">
+                    <div class="flex justify-between items-start mb-3">
+                        <h3 class="text-xl font-bold text-white">${objective.title}</h3>
+                        <div class="flex space-x-3 items-center">
+                            <button data-action="edit-objective" data-objective-index="${index}" class="text-gray-400 hover:text-white">✏️</button>
+                            <button data-action="delete-objective" data-objective-index="${index}" class="text-gray-400 hover:text-red-500">🗑️</button>
+                        </div>
+                    </div>
+                     <div class="mb-4">
+                        <div class="flex justify-between text-sm text-gray-400 mb-1">
+                            <span>Progreso del Objetivo</span>
+                            <span>${progress.toFixed(0)}%</span>
+                        </div>
+                        ${renderProgressBar(progress)}
+                    </div>
+                    <div class="key-results-container space-y-2">
+                        ${objective.keyResults.map(kr => renderKeyResult(kr, index)).join('')}
+                    </div>
+                    <button data-action="add-kr" data-objective-index="${index}" class="w-full mt-4 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg text-sm">+ Añadir Key Result</button>
+                </div>
+            `;
+        };
+        
+        const renderApp = () => {
+            const objectivesContainer = document.getElementById('objectives-container');
+            const objectivesInQuarter = state.objectives.filter(obj => obj.year === state.currentYear && obj.quarter === state.currentQuarter);
+
+            if (objectivesInQuarter.length === 0) {
+                 objectivesContainer.innerHTML = `<div class="text-center py-10 px-6 bg-gray-800 rounded-lg">
+                    <h3 class="text-xl font-semibold text-white">¡Todo listo para empezar!</h3>
+                    <p class="text-gray-400 mt-2">Añade tu primer objetivo para este Q y empieza a medir tu progreso.</p>
+                 </div>`;
+            } else {
+                 objectivesContainer.innerHTML = objectivesInQuarter.map(renderObjective).join('');
+            }
+            
+            renderOverallProgress();
+        };
+        
+        // --- MODAL & FORM LOGIC ---
+        const modal = document.getElementById('modal');
+        const modalContent = document.getElementById('modal-content');
+        const modalTitle = document.getElementById('modal-title');
+        const modalForm = document.getElementById('modal-form');
+        let currentFormConfig = null;
+
+        const showModal = (config) => {
+            currentFormConfig = config;
+            modalTitle.textContent = config.title;
+            modalForm.innerHTML = config.fields.map(field => `
+                <div class="mb-4">
+                    <label class="block text-gray-400 text-sm font-bold mb-2" for="${field.id}">${field.label}</label>
+                    <input type="${field.type || 'text'}" id="${field.id}" value="${field.value || ''}" placeholder="${field.placeholder || ''}" class="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-gray-200 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+            `).join('');
+            modal.classList.remove('hidden');
+            modal.classList.add('modal-enter-active');
+        };
+
+        const hideModal = () => {
+             modal.classList.add('modal-leave-active');
+             modal.classList.remove('modal-enter-active');
+             setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('modal-leave-active');
+                modalForm.innerHTML = '';
+                currentFormConfig = null;
+             }, 300);
+        };
+        
+        const handleFormSubmit = () => {
+            if (!currentFormConfig) return;
+
+            const formData = new FormData(modalForm);
+            const data = {};
+            currentFormConfig.fields.forEach(field => {
+                 const value = document.getElementById(field.id).value;
+                 data[field.id] = field.type === 'number' ? parseFloat(value) || 0 : value;
+            });
+            
+            currentFormConfig.onSave(data);
+            hideModal();
+            saveData();
+            renderApp();
+        };
+        
+        // --- EVENT HANDLERS ---
+        document.getElementById('add-objective-btn').addEventListener('click', () => {
+            showModal({
+                title: 'Añadir Nuevo Objetivo',
+                fields: [
+                    { id: 'title', label: 'Título del Objetivo', placeholder: 'Ej: Lanzar nueva versión de la App' }
+                ],
+                onSave: (data) => {
+                    state.objectives.push({
+                        id: Date.now(),
+                        title: data.title,
+                        year: state.currentYear,
+                        quarter: state.currentQuarter,
+                        keyResults: []
+                    });
+                }
+            });
+        });
+        
+        document.getElementById('app').addEventListener('click', (e) => {
+            const target = e.target.closest('button');
+            if (!target) return;
+
+            const action = target.dataset.action;
+            const objectiveIndex = parseInt(target.dataset.objectiveIndex);
+            const krId = target.dataset.krId ? parseInt(target.dataset.krId) : null;
+            
+            const objective = state.objectives[objectiveIndex];
+
+            switch(action) {
+                case 'add-kr': {
+                    showModal({
+                        title: 'Añadir Key Result',
+                        fields: [
+                            { id: 'title', label: 'Título del KR', placeholder: 'Ej: Aumentar usuarios activos' },
+                            { id: 'initialValue', label: 'Valor Inicial', type: 'number', value: 0 },
+                            { id: 'targetValue', label: 'Valor Objetivo', type: 'number', value: 100 },
+                        ],
+                        onSave: (data) => {
+                            objective.keyResults.push({
+                                id: Date.now(),
+                                ...data,
+                                currentValue: data.initialValue
+                            });
+                        }
+                    });
+                    break;
+                }
+                case 'edit-objective': {
+                     showModal({
+                        title: 'Editar Objetivo',
+                        fields: [
+                            { id: 'title', label: 'Título del Objetivo', value: objective.title }
+                        ],
+                        onSave: (data) => {
+                            objective.title = data.title;
+                        }
+                    });
+                    break;
+                }
+                case 'delete-objective': {
+                    if (confirm(`¿Estás seguro de que quieres eliminar el objetivo "${objective.title}"?`)) {
+                        state.objectives.splice(objectiveIndex, 1);
+                        saveData();
+                        renderApp();
+                    }
+                    break;
+                }
+                case 'edit-kr': {
+                    const kr = objective.keyResults.find(k => k.id === krId);
+                    if (!kr) return;
+                    showModal({
+                        title: 'Editar Key Result',
+                        fields: [
+                            { id: 'title', label: 'Título del KR', value: kr.title },
+                            { id: 'initialValue', label: 'Valor Inicial', type: 'number', value: kr.initialValue },
+                            { id: 'targetValue', label: 'Valor Objetivo', type: 'number', value: kr.targetValue },
+                            { id: 'currentValue', label: 'Valor Actual', type: 'number', value: kr.currentValue },
+                        ],
+                        onSave: (data) => {
+                           Object.assign(kr, data);
+                        }
+                    });
+                    break;
+                }
+                case 'delete-kr': {
+                    const krIndex = objective.keyResults.findIndex(k => k.id === krId);
+                    if (krIndex > -1 && confirm('¿Estás seguro de que quieres eliminar este Key Result?')) {
+                        objective.keyResults.splice(krIndex, 1);
+                        saveData();
+                        renderApp();
+                    }
+                    break;
+                }
+                 case 'quick-update-kr': {
+                    const kr = objective.keyResults.find(k => k.id === krId);
+                    if (!kr) return;
+
+                    // A simple increment, could be more complex (e.g. by 1, 5, 10)
+                    const step = (kr.targetValue - kr.initialValue) / 10 || 1; // 10% step or 1
+                    kr.currentValue = Math.min(kr.targetValue, kr.currentValue + step);
+                    
+                    saveData();
+                    renderApp(); // Full re-render to update all progress bars
+                    break;
+                }
+            }
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target.id === 'modal' || e.target.id === 'modal-cancel-btn') {
+                hideModal();
+            }
+        });
+
+        document.getElementById('modal-save-btn').addEventListener('click', handleFormSubmit);
+
+        yearInput.addEventListener('change', (e) => {
+            state.currentYear = parseInt(e.target.value);
+            saveData();
+            renderApp();
+        });
+
+        quarterInput.addEventListener('change', (e) => {
+            state.currentQuarter = parseInt(e.target.value);
+            saveData();
+            renderApp();
+        });
+        
+        // --- IMPORT/EXPORT ---
+        document.getElementById('export-json-btn').addEventListener('click', () => {
+            const dataStr = JSON.stringify(state, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = `okrs_${state.currentYear}_Q${state.currentQuarter}.json`;
+
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+        });
+
+        document.getElementById('import-json-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (!confirm("¿Estás seguro? Esto reemplazará todos tus datos actuales.")) {
+                e.target.value = ''; // Reset input
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const importedState = JSON.parse(event.target.result);
+                    // Basic validation
+                    if (importedState.objectives && 'currentYear' in importedState) {
+                        state = importedState;
+                        yearInput.value = state.currentYear;
+                        quarterInput.value = state.currentQuarter;
+                        saveData();
+                        renderApp();
+                        alert("Datos importados con éxito.");
+                    } else {
+                        throw new Error("El archivo JSON no tiene el formato esperado.");
+                    }
+                } catch (error) {
+                    console.error("Error al importar el archivo:", error);
+                    alert("Error al importar el archivo. Asegúrate de que es un JSON de OKRs válido.");
+                } finally {
+                    e.target.value = ''; // Reset input
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // --- INITIAL LOAD ---
+        loadData();
+        renderApp();
+    });
+    </script>
+
+</body>
+</html>

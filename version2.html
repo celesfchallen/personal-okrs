@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tracker de Objetivos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://rsms.me/inter/inter.css');
+        html { font-family: 'Inter', sans-serif; }
+        .progress-bar-fill { transition: width 0.5s cubic-bezier(0.4, 1, 0.75, 0.9); }
+        .modal-content { transition: transform 0.3s ease-out, opacity 0.3s ease-out; }
+        .modal.hidden .modal-content { transform: translateY(20px); opacity: 0; }
+        .sub-objective-item { transition: background-color 0.2s; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 antialiased">
+
+    <div id="app" class="max-w-3xl mx-auto p-4 md:p-6">
+
+        <!-- HEADER -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-white mb-3">Mis Objetivos</h1>
+            <div id="overall-progress-container" class="w-full max-w-sm mx-auto">
+                <!-- Overall progress rendered by JS -->
+            </div>
+             <div class="mt-6 flex justify-center space-x-2">
+                <button id="export-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Exportar JSON</button>
+                <label class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg text-sm cursor-pointer">
+                    Importar JSON
+                    <input type="file" id="import-input" class="hidden" accept=".json">
+                </label>
+            </div>
+        </header>
+
+        <!-- CATEGORIES CONTAINER -->
+        <main id="categories-container" class="space-y-6">
+            <!-- Categories rendered by JS -->
+        </main>
+
+        <!-- FLOATING ACTION BUTTON -->
+        <button id="add-category-btn" class="fixed bottom-6 right-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg text-2xl font-bold">
+            +
+        </button>
+    </div>
+
+    <!-- MODAL -->
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
+        <div class="modal-content bg-gray-800 rounded-2xl shadow-xl p-6 w-full max-w-md mx-auto">
+            <h2 id="modal-title" class="text-2xl font-bold mb-6 text-white"></h2>
+            <form id="modal-form" class="space-y-4">
+                <!-- Dynamic form fields rendered by JS -->
+            </form>
+            <div class="flex justify-end space-x-4 mt-8">
+                <button id="modal-cancel-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-5 rounded-lg">Cancelar</button>
+                <button id="modal-save-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-lg">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- STATE MANAGEMENT ---
+        const STORAGE_KEY = 'okrData_v2';
+        let state = { categories: [] };
+
+        const getInitialState = () => ({
+            categories: [
+                {
+                    id: Date.now(),
+                    title: "Salud",
+                    subObjectives: [
+                        { id: Date.now() + 1, title: "Caminar 8k pasos", type: 'habit', target: 5, current: 1 },
+                        { id: Date.now() + 2, title: "Meditar 10 minutos", type: 'habit', target: 3, current: 0 },
+                        { id: Date.now() + 3, title: "Leer libro de nutrición", type: 'milestone', completed: false }
+                    ]
+                }
+            ]
+        });
+
+        const saveData = () => {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            } catch (e) {
+                console.error("Error saving to localStorage", e);
+            }
+            render();
+        };
+
+        const loadData = () => {
+            const savedData = localStorage.getItem(STORAGE_KEY);
+            if (savedData) {
+                try {
+                    state = JSON.parse(savedData);
+                } catch (e) {
+                    console.error("Error parsing saved data, using initial state.", e);
+                    state = getInitialState();
+                }
+            } else {
+                state = getInitialState();
+            }
+            render();
+        };
+
+        // --- CALCULATIONS ---
+        const calculateSubObjectiveProgress = (so) => {
+            if (so.type === 'milestone') {
+                return so.completed ? 100 : 0;
+            }
+            if (so.type === 'habit') {
+                if (so.target === 0) return 100;
+                const progress = (so.current / so.target) * 100;
+                return Math.max(0, Math.min(100, progress));
+            }
+            return 0;
+        };
+
+        const calculateCategoryProgress = (category) => {
+            if (category.subObjectives.length === 0) return 0;
+            const totalProgress = category.subObjectives.reduce((sum, so) => sum + calculateSubObjectiveProgress(so), 0);
+            return totalProgress / category.subObjectives.length;
+        };
+
+        const calculateOverallProgress = () => {
+            if (state.categories.length === 0) return 0;
+            const totalProgress = state.categories.reduce((sum, cat) => sum + calculateCategoryProgress(cat), 0);
+            return totalProgress / state.categories.length;
+        };
+
+        // --- RENDERING ---
+        const renderProgressBar = (progress, label) => {
+            return `
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-sm font-medium text-gray-400">${label}</span>
+                        <span class="text-sm font-bold text-white">${progress.toFixed(0)}%</span>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-2.5">
+                        <div class="bg-emerald-500 h-2.5 rounded-full progress-bar-fill" style="width: ${progress}%"></div>
+                    </div>
+                </div>
+            `;
+        };
+
+        const renderSubObjective = (so, catId) => {
+            const progress = calculateSubObjectiveProgress(so);
+            let controls = '';
+
+            if (so.type === 'habit') {
+                controls = `
+                    <div class="flex items-center space-x-3">
+                        <button data-action="decrement-so" class="bg-gray-700 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold">-</button>
+                        <span class="font-mono text-lg">${so.current}/${so.target}</span>
+                        <button data-action="increment-so" class="bg-gray-700 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold">+</button>
+                    </div>
+                `;
+            } else if (so.type === 'milestone') {
+                controls = `
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" data-action="toggle-milestone" class="hidden" ${so.completed ? 'checked' : ''}>
+                        <div class="w-12 h-7 rounded-full ${so.completed ? 'bg-emerald-500' : 'bg-gray-600'} relative transition-colors">
+                            <div class="absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform ${so.completed ? 'transform translate-x-5' : ''}"></div>
+                        </div>
+                        <span class="ml-3 font-semibold">${so.completed ? 'Completado' : 'Pendiente'}</span>
+                    </label>
+                `;
+            }
+
+            return `
+                <div class="sub-objective-item bg-gray-800 p-4 rounded-lg" data-sub-objective-id="${so.id}" data-category-id="${catId}">
+                    <div class="flex flex-col sm:flex-row justify-between sm:items-center space-y-4 sm:space-y-0">
+                        <p class="font-semibold flex-1 pr-4">${so.title}</p>
+                        <div class="flex items-center justify-between">
+                            ${controls}
+                            <button data-action="delete-so" class="ml-6 text-gray-500 hover:text-red-500 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                        </div>
+                    </div>
+                    ${so.type === 'habit' ? `<div class="mt-3">${renderProgressBar(progress, '')}</div>` : ''}
+                </div>
+            `;
+        };
+
+        const renderCategory = (category) => {
+            const progress = calculateCategoryProgress(category);
+            return `
+                <section class="bg-gray-800/50 backdrop-blur-sm ring-1 ring-white/10 rounded-2xl shadow-lg" data-category-id="${category.id}">
+                    <header class="p-5 border-b border-white/10 flex justify-between items-center">
+                        <div>
+                             <h2 class="text-2xl font-bold text-white">${category.title}</h2>
+                             ${renderProgressBar(progress, 'Progreso de Categoría')}
+                        </div>
+                        <button data-action="delete-category" class="text-gray-500 hover:text-red-500 transition-colors">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                    </header>
+                    <div class="p-5 space-y-3">
+                        ${category.subObjectives.map(so => renderSubObjective(so, category.id)).join('')}
+                    </div>
+                    <footer class="p-5 border-t border-white/10">
+                        <button data-action="add-so" class="w-full bg-indigo-600/50 hover:bg-indigo-600/80 text-white font-bold py-3 px-4 rounded-lg text-sm transition-colors">
+                            + Añadir Sub-Objetivo
+                        </button>
+                    </footer>
+                </section>
+            `;
+        };
+
+        const render = () => {
+            const overallProgress = calculateOverallProgress();
+            document.getElementById('overall-progress-container').innerHTML = renderProgressBar(overallProgress, 'Progreso General');
+            
+            const categoriesContainer = document.getElementById('categories-container');
+            if (state.categories.length === 0) {
+                categoriesContainer.innerHTML = `
+                    <div class="text-center py-16 px-6 bg-gray-800/50 rounded-lg border-2 border-dashed border-gray-700">
+                        <h3 class="text-xl font-semibold text-white">Comienza tu viaje</h3>
+                        <p class="text-gray-400 mt-2">Crea tu primera categoría de objetivos usando el botón <span class="text-indigo-400 font-bold">+</span>.</p>
+                    </div>`;
+            } else {
+                categoriesContainer.innerHTML = state.categories.map(renderCategory).join('');
+            }
+        };
+
+        // --- MODAL & FORM LOGIC ---
+        const modal = document.getElementById('modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalForm = document.getElementById('modal-form');
+        let onSaveCallback = null;
+
+        const showModal = (config) => {
+            modalTitle.textContent = config.title;
+            let fieldsHtml = `<input type="hidden" id="id" value="${config.id || ''}">`;
+            fieldsHtml += config.fields.map(field => `
+                <div>
+                    <label class="block text-gray-400 text-sm font-bold mb-2" for="${field.id}">${field.label}</label>
+                    <input type="${field.type || 'text'}" id="${field.id}" value="${field.value || ''}" placeholder="${field.placeholder || ''}" class="shadow appearance-none border border-gray-600 rounded-lg w-full py-3 px-4 bg-gray-700 text-gray-200 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+            `).join('');
+
+            if (config.typeSelector) {
+                fieldsHtml += `
+                    <div>
+                        <label class="block text-gray-400 text-sm font-bold mb-2">Tipo de Objetivo</label>
+                        <select id="so-type" class="shadow border border-gray-600 rounded-lg w-full py-3 px-4 bg-gray-700 text-gray-200 focus:outline-none focus:shadow-outline">
+                            <option value="habit" ${config.type === 'habit' ? 'selected' : ''}>Hábito (ej. 5 veces)</option>
+                            <option value="milestone" ${config.type === 'milestone' ? 'selected' : ''}>Hito (ej. completar tarea)</option>
+                        </select>
+                    </div>
+                    <div id="target-container" class="${config.type !== 'habit' ? 'hidden' : ''}">
+                        <label class="block text-gray-400 text-sm font-bold mb-2" for="target">Meta (ej. 5)</label>
+                        <input type="number" id="target" value="${config.target || 5}" class="shadow appearance-none border border-gray-600 rounded-lg w-full py-3 px-4 bg-gray-700 text-gray-200 leading-tight focus:outline-none focus:shadow-outline">
+                    </div>
+                `;
+            }
+            
+            modalForm.innerHTML = fieldsHtml;
+            onSaveCallback = config.onSave;
+            modal.classList.remove('hidden');
+
+            if (config.typeSelector) {
+                document.getElementById('so-type').addEventListener('change', (e) => {
+                    document.getElementById('target-container').classList.toggle('hidden', e.target.value !== 'habit');
+                });
+            }
+        };
+
+        const hideModal = () => {
+            modal.classList.add('hidden');
+            onSaveCallback = null;
+            modalForm.innerHTML = '';
+        };
+
+        document.getElementById('modal-save-btn').addEventListener('click', () => {
+            if (onSaveCallback) {
+                const data = {
+                    id: document.getElementById('id')?.value
+                };
+                
+                Array.from(modalForm.elements).forEach(el => {
+                    if (el.id && el.tagName === 'INPUT') {
+                        data[el.id] = el.type === 'number' ? parseFloat(el.value) || 0 : el.value;
+                    } else if (el.id && el.tagName === 'SELECT') {
+                        data[el.id] = el.value;
+                    }
+                });
+                onSaveCallback(data);
+            }
+        });
+
+        modal.addEventListener('click', e => { if (e.target.id === 'modal' || e.target.id === 'modal-cancel-btn') hideModal(); });
+
+        // --- EVENT HANDLERS ---
+        document.getElementById('add-category-btn').addEventListener('click', () => {
+            showModal({
+                title: 'Nueva Categoría',
+                fields: [{ id: 'title', label: 'Nombre de la Categoría', placeholder: 'Ej: Desarrollo Profesional' }],
+                onSave: (data) => {
+                    if (data.title) {
+                        state.categories.push({ id: Date.now(), title: data.title, subObjectives: [] });
+                        hideModal();
+                        saveData();
+                    }
+                }
+            });
+        });
+
+        document.getElementById('categories-container').addEventListener('click', (e) => {
+            const button = e.target.closest('button, input[type=checkbox]');
+            if (!button) return;
+
+            const action = button.dataset.action;
+            const categoryEl = e.target.closest('[data-category-id]');
+            const soEl = e.target.closest('[data-sub-objective-id]');
+            
+            const catId = categoryEl ? parseInt(categoryEl.dataset.categoryId) : null;
+            const soId = soEl ? parseInt(soEl.dataset.subObjectiveId) : null;
+
+            const category = state.categories.find(c => c.id === catId);
+            if (!category && action !== 'add-category') return;
+
+            const subObjective = soId ? category.subObjectives.find(so => so.id === soId) : null;
+
+            switch(action) {
+                case 'add-so':
+                    showModal({
+                        title: 'Nuevo Sub-Objetivo',
+                        fields: [{ id: 'title', label: 'Descripción', placeholder: 'Ej: Terminar curso de React' }],
+                        typeSelector: true,
+                        type: 'habit',
+                        target: 5,
+                        onSave: (data) => {
+                            if (data.title) {
+                                const newSo = {
+                                    id: Date.now(),
+                                    title: data.title,
+                                    type: data['so-type'],
+                                };
+                                if (newSo.type === 'habit') {
+                                    newSo.target = data.target;
+                                    newSo.current = 0;
+                                } else {
+                                    newSo.completed = false;
+                                }
+                                category.subObjectives.push(newSo);
+                                hideModal();
+                                saveData();
+                            }
+                        }
+                    });
+                    break;
+                case 'delete-category':
+                    if (confirm(`¿Eliminar la categoría "${category.title}" y todos sus objetivos?`)) {
+                        state.categories = state.categories.filter(c => c.id !== catId);
+                        saveData();
+                    }
+                    break;
+                case 'delete-so':
+                    if (confirm(`¿Eliminar el objetivo "${subObjective.title}"?`)) {
+                        category.subObjectives = category.subObjectives.filter(so => so.id !== soId);
+                        saveData();
+                    }
+                    break;
+                case 'increment-so':
+                    if (subObjective && subObjective.current < subObjective.target) {
+                        subObjective.current++;
+                        saveData();
+                    }
+                    break;
+                case 'decrement-so':
+                    if (subObjective && subObjective.current > 0) {
+                        subObjective.current--;
+                        saveData();
+                    }
+                    break;
+                case 'toggle-milestone':
+                    if (subObjective) {
+                        subObjective.completed = !subObjective.completed;
+                        saveData();
+                    }
+                    break;
+            }
+        });
+
+        // --- IMPORT/EXPORT ---
+        document.getElementById('export-btn').addEventListener('click', () => {
+            const dataStr = JSON.stringify(state, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `objetivos_backup.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        document.getElementById('import-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (!confirm("¿Seguro? Esto reemplazará todos los datos actuales.")) {
+                e.target.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const importedState = JSON.parse(event.target.result);
+                    if (importedState && importedState.categories) {
+                        state = importedState;
+                        saveData();
+                        alert("Datos importados con éxito.");
+                    } else {
+                        throw new Error("Formato de archivo inválido.");
+                    }
+                } catch (error) {
+                    alert("Error al importar el archivo: " + error.message);
+                } finally {
+                    e.target.value = '';
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // --- INITIAL LOAD ---
+        loadData();
+    });
+    </script>
+</body>
+</html>
