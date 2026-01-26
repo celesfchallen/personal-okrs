@@ -59,6 +59,19 @@ const initialData = [
       },
     ],
   },
+  {
+    id: 'obj-3',
+    title: 'Planificar viaje a Japón',
+    quarter: 'Q4 2025',
+    krs: [
+        {
+            id: 'kr-3-1',
+            title: 'Definir itinerario y presupuesto',
+            type: 'boolean',
+            currentValue: 0,
+        }
+    ]
+  }
 ];
 
 export const OkrProvider = ({ children }) => {
