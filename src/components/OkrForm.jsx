@@ -3,11 +3,12 @@ import { useOkr } from '../contexts/OkrContext';
 import { v4 as uuidv4 } from 'uuid';
 import { Plus, Trash2 } from 'lucide-react';
 
-const OkrForm = ({ isOpen, onClose, objectiveToEdit }) => {
+const OkrForm = ({ isOpen, onClose, objectiveToEdit, currentQuarter }) => {
   const { addObjective, updateObjective } = useOkr();
   const [objective, setObjective] = useState({
     title: '',
     krs: [],
+    quarter: currentQuarter,
   });
 
   useEffect(() => {
@@ -17,9 +18,10 @@ const OkrForm = ({ isOpen, onClose, objectiveToEdit }) => {
       setObjective({
         title: '',
         krs: [],
+        quarter: currentQuarter,
       });
     }
-  }, [objectiveToEdit, isOpen]);
+  }, [objectiveToEdit, isOpen, currentQuarter]);
 
   const handleObjectiveChange = (e) => {
     const { name, value } = e.target;
