@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 
+import CustomCombobox from './CustomCombobox';
+
 const QuarterSelector = ({ currentQuarter, onQuarterChange }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedQuarter, setSelectedQuarter] = useState('');
@@ -20,7 +22,7 @@ const QuarterSelector = ({ currentQuarter, onQuarterChange }) => {
   };
 
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 10 }, (_, i) => currentYear - 5 + i);
+  const years = Array.from({ length: 50 }, (_, i) => currentYear - 25 + i);
 
   return (
     <>
@@ -52,17 +54,14 @@ const QuarterSelector = ({ currentQuarter, onQuarterChange }) => {
                 </select>
                 <ChevronDown size={16} className="absolute right-3 top-10 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
-              {/* Year Dropdown */}
+              {/* Year Combobox */}
               <div className="relative flex-1">
                 <label className="block text-sm font-medium mb-1">Year</label>
-                <select
+                <CustomCombobox
+                  options={years}
                   value={selectedYear}
-                  onChange={(e) => setSelectedYear(e.target.value)}
-                  className="appearance-none w-full bg-slate-700 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  {years.map(year => <option key={year} value={year}>{year}</option>)}
-                </select>
-                <ChevronDown size={16} className="absolute right-3 top-10 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  onChange={setSelectedYear}
+                />
               </div>
             </div>
             <div className="flex justify-end gap-4">
