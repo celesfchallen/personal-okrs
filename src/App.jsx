@@ -4,11 +4,14 @@ import OkrCard from './components/OkrCard';
 import OkrForm from './components/OkrForm';
 import DropdownMenu from './components/DropdownMenu';
 import { Plus } from 'lucide-react';
+import { getCurrentQuarter } from './utils/dateUtils';
+import QuarterSelector from './components/QuarterSelector';
 
 function App() {
   const { okrs } = useOkr();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [objectiveToEdit, setObjectiveToEdit] = useState(null);
+  const [currentQuarter, setCurrentQuarter] = useState(getCurrentQuarter());
 
   const handleOpenModal = () => {
     setObjectiveToEdit(null);
@@ -25,23 +28,38 @@ function App() {
     setObjectiveToEdit(null);
   };
 
+  const filteredOkrs = (okrs || []).filter(
+    (okr) => okr.quarter === currentQuarter
+  );
+
   return (
     <div className="dark bg-gray-900 min-h-screen font-sans">
       <header className="bg-slate-800 shadow-md text-slate-100">
         <div className="max-w-4xl mx-auto py-4 px-5 flex justify-between items-center">
           <h1 className="text-2xl font-bold">Personal OKRs</h1>
+          <QuarterSelector 
+            currentQuarter={currentQuarter}
+            onQuarterChange={setCurrentQuarter}
+          />
           <DropdownMenu />
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto p-5 pb-24">
-        {(okrs || []).map((objective) => (
-          <OkrCard
-            key={objective.id}
-            objective={objective}
-            onEdit={handleEditObjective}
-          />
-        ))}
+        {filteredOkrs.length > 0 ? (
+          filteredOkrs.map((objective) => (
+            <OkrCard
+              key={objective.id}
+              objective={objective}
+              onEdit={handleEditObjective}
+            />
+          ))
+        ) : (
+          <div className="text-center py-16">
+            <p className="text-slate-400">No objectives for this quarter.</p>
+            <p className="text-slate-500 text-sm">Create a new one or navigate to another quarter.</p>
+          </div>
+        )}
       </main>
 
       <button
@@ -56,6 +74,7 @@ function App() {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         objectiveToEdit={objectiveToEdit}
+        currentQuarter={currentQuarter}
       />
     </div>
   );

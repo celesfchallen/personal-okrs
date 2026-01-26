@@ -1,15 +1,19 @@
 import React, { createContext, useContext, useEffect } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { v4 as uuidv4 } from 'uuid';
+import { getCurrentQuarter } from '../utils/dateUtils';
 
 const OkrContext = createContext();
 
 export const useOkr = () => useContext(OkrContext);
 
+const currentQuarter = getCurrentQuarter();
+
 const initialData = [
   {
     id: 'obj-1',
     title: 'Mejorar mi estado físico',
+    quarter: currentQuarter,
     krs: [
       {
         id: 'kr-1-1',
@@ -36,6 +40,7 @@ const initialData = [
   {
     id: 'obj-2',
     title: 'Aprender a programar en React',
+    quarter: currentQuarter,
     krs: [
       {
         id: 'kr-2-1',
@@ -54,6 +59,19 @@ const initialData = [
       },
     ],
   },
+  {
+    id: 'obj-3',
+    title: 'Planificar viaje a Japón',
+    quarter: 'Q4 2025',
+    krs: [
+        {
+            id: 'kr-3-1',
+            title: 'Definir itinerario y presupuesto',
+            type: 'boolean',
+            currentValue: 0,
+        }
+    ]
+  }
 ];
 
 export const OkrProvider = ({ children }) => {
@@ -66,7 +84,7 @@ export const OkrProvider = ({ children }) => {
   }, []);
 
   const addObjective = (objective) => {
-    const newObjective = { ...objective, id: uuidv4(), krs: objective.krs.map(kr => ({...kr, id: uuidv4(), ...(kr.type === 'frequency' && !kr.completedDays ? { completedDays: [] } : {})})) };
+    const newObjective = { ...objective, id: uuidv4(), krs: objective.krs.map(kr => ({...kr, id: uuidv4()})) };
     setOkrs([...okrs, newObjective]);
   };
 
