@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useOkr } from './contexts/OkrContext';
 import OkrCard from './components/OkrCard';
 import OkrForm from './components/OkrForm';
+import DropdownMenu from './components/DropdownMenu';
 import { Plus } from 'lucide-react';
 
 function App() {
@@ -26,14 +27,15 @@ function App() {
 
   return (
     <div className="dark bg-gray-900 min-h-screen font-sans">
-      <header className="bg-slate-800 shadow-md">
-        <div className="max-w-4xl mx-auto py-4 px-5">
-          <h1 className="text-2xl font-bold text-slate-100">Personal OKRs</h1>
+      <header className="bg-slate-800 shadow-md text-slate-100">
+        <div className="max-w-4xl mx-auto py-4 px-5 flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Personal OKRs</h1>
+          <DropdownMenu />
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto p-5 pb-24">
-        {okrs.map((objective) => (
+        {(okrs || []).map((objective) => (
           <OkrCard
             key={objective.id}
             objective={objective}
