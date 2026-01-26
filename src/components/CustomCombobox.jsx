@@ -5,6 +5,7 @@ const CustomCombobox = ({ options, value, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const wrapperRef = useRef(null);
+  const listRef = useRef(null);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -17,6 +18,18 @@ const CustomCombobox = ({ options, value, onChange }) => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [wrapperRef]);
+  
+  useEffect(() => {
+    if (isOpen) {
+      setSearchTerm('');
+      setTimeout(() => {
+        const selectedItem = listRef.current?.querySelector(`[data-value="${value}"]`);
+        if (selectedItem) {
+          selectedItem.scrollIntoView({ block: 'center' });
+        }
+      }, 0);
+    }
+  }, [isOpen, value]);
 
   const filteredOptions = options.filter(option =>
     option.toString().toLowerCase().includes(searchTerm.toLowerCase())
@@ -48,10 +61,11 @@ const CustomCombobox = ({ options, value, onChange }) => {
       </div>
 
       {isOpen && (
-        <ul className="absolute z-10 w-full bg-slate-600 border border-slate-500 rounded-md mt-1 max-h-48 overflow-y-auto">
+        <ul ref={listRef} className="absolute z-10 w-full bg-slate-600 border border-slate-500 rounded-md mt-1 max-h-48 overflow-y-auto">
           {filteredOptions.map(option => (
             <li
               key={option}
+              data-value={option}
               onClick={() => {
                 onChange(option);
                 setSearchTerm(option.toString());

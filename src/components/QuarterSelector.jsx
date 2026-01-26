@@ -22,7 +22,7 @@ const QuarterSelector = ({ currentQuarter, onQuarterChange }) => {
   };
 
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 50 }, (_, i) => currentYear - 25 + i);
+  const years = Array.from({ length: 30 }, (_, i) => currentYear - 15 + i);
 
   return (
     <>
