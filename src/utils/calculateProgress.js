@@ -1,16 +1,31 @@
 
 export const calculateKrProgress = (kr) => {
-    if (kr.type === 'milestone') {
-      return kr.currentValue >= kr.targetValue ? 100 : 0;
+  let progress = 0;
+  switch (kr.type) {
+    case 'numeric': {
+      const { initialValue = 0, currentValue, targetValue } = kr;
+      if (targetValue === initialValue) return 0;
+      progress =
+        ((currentValue - initialValue) / (targetValue - initialValue)) * 100;
+      break;
     }
-  
-    if (kr.targetValue === kr.initialValue) return 0;
-  
-    const progress =
-      ((kr.currentValue - kr.initialValue) / (kr.targetValue - kr.initialValue)) * 100;
-  
-    return Math.max(0, Math.min(100, progress)); // Clamp between 0 and 100
-  };
+    case 'boolean': {
+      const { currentValue } = kr;
+      progress = currentValue ? 100 : 0;
+      break;
+    }
+    case 'frequency': {
+      const { completedDays = [], targetValue } = kr;
+      if (targetValue === 0) return 0;
+      progress = (completedDays.length / targetValue) * 100;
+      break;
+    }
+    default:
+      progress = 0;
+  }
+
+  return Math.max(0, Math.min(100, progress)); // Clamp between 0 and 100
+};
   
   export const calculateObjectiveProgress = (objective) => {
     if (!objective.krs || objective.krs.length === 0) {

@@ -17,14 +17,6 @@ const OkrCard = ({ objective, onEdit }) => {
       >
         <div className="flex justify-between items-start">
           <div>
-            <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-indigo-300 bg-indigo-900">
-                    {objective.quarter}
-                </span>
-                <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-gray-300 bg-gray-700">
-                    {objective.category}
-                </span>
-            </div>
             <h3 className="text-lg font-bold mt-2 text-slate-100">{objective.title}</h3>
           </div>
           <div className="flex items-center gap-2">
@@ -50,7 +42,7 @@ const OkrCard = ({ objective, onEdit }) => {
           <div className="p-4 border-t border-slate-700">
             <h4 className="font-semibold mb-2 text-slate-300">Key Results</h4>
             {objective.krs.map((kr) => (
-              <KrRow key={kr.id} kr={kr} />
+              <KrRow key={kr.id} kr={kr} objective={objective} />
             ))}
           </div>
           <div className="p-4 bg-slate-900 flex justify-end gap-2">

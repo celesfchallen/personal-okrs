@@ -7,8 +7,6 @@ const OkrForm = ({ isOpen, onClose, objectiveToEdit }) => {
   const { addObjective, updateObjective } = useOkr();
   const [objective, setObjective] = useState({
     title: '',
-    category: '',
-    quarter: 'Q1',
     krs: [],
   });
 
@@ -18,8 +16,6 @@ const OkrForm = ({ isOpen, onClose, objectiveToEdit }) => {
     } else {
       setObjective({
         title: '',
-        category: '',
-        quarter: 'Q1',
         krs: [],
       });
     }
@@ -33,7 +29,30 @@ const OkrForm = ({ isOpen, onClose, objectiveToEdit }) => {
   const handleKrChange = (index, e) => {
     const { name, value } = e.target;
     const krs = [...objective.krs];
-    krs[index][name] = name === 'type' || name === 'title' ? value : Number(value);
+    krs[index][name] = name === 'title' || name === 'unit' || name === 'period' ? value : Number(value);
+    setObjective({ ...objective, krs });
+  };
+  
+  const handleKrTypeChange = (index, newType) => {
+    const krs = [...objective.krs];
+    const oldKr = krs[index];
+    let newKr = { id: oldKr.id, title: oldKr.title, type: newType };
+
+    switch (newType) {
+      case 'numeric':
+        newKr = { ...newKr, initialValue: 0, currentValue: 0, targetValue: 100, unit: '' };
+        break;
+      case 'boolean':
+        newKr = { ...newKr, currentValue: 0 };
+        break;
+      case 'frequency':
+        newKr = { ...newKr, targetValue: 4, period: 'weekly', completedDays: [] };
+        break;
+      default:
+        break;
+    }
+
+    krs[index] = newKr;
     setObjective({ ...objective, krs });
   };
 
@@ -45,11 +64,11 @@ const OkrForm = ({ isOpen, onClose, objectiveToEdit }) => {
         {
           id: uuidv4(),
           title: '',
-          type: 'metric',
+          type: 'numeric',
           initialValue: 0,
-          targetValue: 100,
           currentValue: 0,
-          weight: 1,
+          targetValue: 100,
+          unit: '',
         },
       ],
     });
@@ -63,10 +82,28 @@ const OkrForm = ({ isOpen, onClose, objectiveToEdit }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (objective.id) {
-      updateObjective(objective);
+    const processedObjective = {
+      ...objective,
+      krs: objective.krs.map(kr => {
+        const newKr = {...kr};
+        if (kr.type === 'numeric' || kr.type === 'frequency') {
+            newKr.targetValue = Number(kr.targetValue) || 0;
+        }
+        if (kr.type === 'numeric') {
+            newKr.initialValue = Number(kr.initialValue) || 0;
+            newKr.currentValue = Number(kr.currentValue) || 0;
+        }
+        // Ensure completedDays exists for frequency
+        if (kr.type === 'frequency' && !newKr.completedDays) {
+          newKr.completedDays = [];
+        }
+        return newKr;
+      })
+    }
+    if (processedObjective.id) {
+      updateObjective(processedObjective);
     } else {
-      addObjective(objective);
+      addObjective(processedObjective);
     }
     onClose();
   };
@@ -84,41 +121,41 @@ const OkrForm = ({ isOpen, onClose, objectiveToEdit }) => {
         <form onSubmit={handleSubmit}>
           {/* Objective fields */}
           <div className="mb-4">
-            <label htmlFor="title" className="block text-sm font-medium">Title</label>
+            <label htmlFor="title" className="block text-sm font-medium">Objective Title</label>
             <input type="text" name="title" value={objective.title} onChange={handleObjectiveChange} className={inputClasses} required />
-          </div>
-          <div className="mb-4">
-            <label htmlFor="category" className="block text-sm font-medium">Category</label>
-            <input type="text" name="category" value={objective.category} onChange={handleObjectiveChange} className={inputClasses} required />
-          </div>
-          <div className="mb-4">
-            <label htmlFor="quarter" className="block text-sm font-medium">Quarter</label>
-            <select name="quarter" value={objective.quarter} onChange={handleObjectiveChange} className={inputClasses}>
-              <option>Q1</option>
-              <option>Q2</option>
-              <option>Q3</option>
-              <option>Q4</option>
-            </select>
           </div>
 
           {/* Key Results */}
           <h3 className="text-xl font-semibold my-4 text-white">Key Results</h3>
           {objective.krs.map((kr, index) => (
-            <div key={index} className="grid grid-cols-1 gap-4 mb-4 p-4 border border-slate-700 rounded-md">
-                <button type="button" onClick={() => removeKr(index)} className="justify-self-end w-8 h-8 flex items-center justify-center bg-red-600 text-white rounded-full hover:bg-red-700"><Trash2 size={16} /></button>
-                <input type="text" name="title" value={kr.title} onChange={(e) => handleKrChange(index, e)} placeholder="KR Title" className={inputClasses} required />
-                <select name="type" value={kr.type} onChange={(e) => handleKrChange(index, e)} className={inputClasses}>
-                    <option value="metric">Metric</option>
-                    <option value="milestone">Milestone</option>
+            <div key={kr.id || index} className="grid grid-cols-1 gap-4 mb-4 p-4 border border-slate-700 rounded-md">
+                <div className="flex justify-between items-start">
+                    <input type="text" name="title" value={kr.title} onChange={(e) => handleKrChange(index, e)} placeholder="KR Title" className={`${inputClasses} w-full`} required />
+                    <button type="button" onClick={() => removeKr(index)} className="ml-2 flex-shrink-0 w-8 h-8 flex items-center justify-center bg-red-600 text-white rounded-full hover:bg-red-700"><Trash2 size={16} /></button>
+                </div>
+                
+                <select name="type" value={kr.type} onChange={(e) => handleKrTypeChange(index, e.target.value)} className={inputClasses}>
+                    <option value="numeric">Numeric</option>
+                    <option value="boolean">Boolean (Done/Not Done)</option>
+                    <option value="frequency">Frequency (Habit)</option>
                 </select>
-                {kr.type === 'metric' && (
+
+                {kr.type === 'numeric' && (
                     <div className="grid grid-cols-3 gap-2">
                         <input type="number" name="initialValue" value={kr.initialValue} onChange={(e) => handleKrChange(index, e)} placeholder="Initial" className={inputClasses} />
                         <input type="number" name="currentValue" value={kr.currentValue} onChange={(e) => handleKrChange(index, e)} placeholder="Current" className={inputClasses} />
                         <input type="number" name="targetValue" value={kr.targetValue} onChange={(e) => handleKrChange(index, e)} placeholder="Target" className={inputClasses} />
                     </div>
                 )}
-                <input type="number" name="weight" value={kr.weight} onChange={(e) => handleKrChange(index, e)} placeholder="Weight" className={inputClasses} />
+                {kr.type === 'frequency' && (
+                    <div className="grid grid-cols-2 gap-2">
+                        <input type="number" name="targetValue" value={kr.targetValue} onChange={(e) => handleKrChange(index, e)} placeholder="How many times?" className={inputClasses} />
+                        <select name="period" value={kr.period} onChange={(e) => handleKrChange(index, e)} className={inputClasses}>
+                            <option value="weekly">per Week</option>
+                            <option value="monthly">per Month</option>
+                        </select>
+                    </div>
+                )}
             </div>
           ))}
           <button type="button" onClick={addKr} className="flex items-center gap-2 text-sm font-medium text-indigo-400 hover:text-indigo-300"><Plus size={16} /> Add Key Result</button>
@@ -135,4 +172,3 @@ const OkrForm = ({ isOpen, onClose, objectiveToEdit }) => {
 };
 
 export default OkrForm;
-
