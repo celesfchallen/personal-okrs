@@ -86,6 +86,7 @@ export const OkrProvider = ({ children }) => {
     <OkrContext.Provider
       value={{
         okrs,
+        setOkrs,
         addObjective,
         updateObjective,
         deleteObjective,
