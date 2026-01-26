@@ -4,8 +4,8 @@ import OkrCard from './components/OkrCard';
 import OkrForm from './components/OkrForm';
 import DropdownMenu from './components/DropdownMenu';
 import { Plus } from 'lucide-react';
-import { getCurrentQuarter, getNextQuarter, getPreviousQuarter } from './utils/dateUtils';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { getCurrentQuarter } from './utils/dateUtils';
+import QuarterSelector from './components/QuarterSelector';
 
 function App() {
   const { okrs } = useOkr();
@@ -37,15 +37,10 @@ function App() {
       <header className="bg-slate-800 shadow-md text-slate-100">
         <div className="max-w-4xl mx-auto py-4 px-5 flex justify-between items-center">
           <h1 className="text-2xl font-bold">Personal OKRs</h1>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setCurrentQuarter(getPreviousQuarter(currentQuarter))} className="p-2 rounded-full hover:bg-slate-700">
-              <ChevronLeft size={20} />
-            </button>
-            <span className='text-lg font-semibold text-slate-400 w-28 text-center'>{currentQuarter}</span>
-            <button onClick={() => setCurrentQuarter(getNextQuarter(currentQuarter))} className="p-2 rounded-full hover:bg-slate-700">
-              <ChevronRight size={20} />
-            </button>
-          </div>
+          <QuarterSelector 
+            currentQuarter={currentQuarter}
+            onQuarterChange={setCurrentQuarter}
+          />
           <DropdownMenu />
         </div>
       </header>
