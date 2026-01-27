@@ -100,7 +100,7 @@ const OkrForm = ({ isOpen, onClose, objectiveToEdit, currentQuarter }) => {
 
   const baseInputClasses = "block w-full border-transparent rounded-lg sm:text-sm text-white";
   const focusClasses = "focus:border-emerald-500 focus:ring-emerald-500";
-  const titleInputClasses = `${baseInputClasses} bg-transparent text-2xl font-bold p-0 focus:ring-0 text-slate-100 placeholder-slate-500`;
+  const titleInputClasses = `${baseInputClasses} bg-transparent text-4xl font-bold p-0 focus:ring-0 text-slate-100 placeholder-slate-500`;
   const regularInputClasses = `${baseInputClasses} bg-slate-800/50 ${focusClasses} px-3 py-2`;
   
   const renderKrSummary = (kr) => {
@@ -115,8 +115,8 @@ const OkrForm = ({ isOpen, onClose, objectiveToEdit, currentQuarter }) => {
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xl z-50 flex justify-center items-end sm:items-center p-0 sm:p-4">
       <div ref={modalRef} className="bg-slate-800/80 border border-slate-700/80 p-5 rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-lg max-h-[95vh] flex flex-col text-slate-300">
-        <div className="flex-shrink-0 mb-4">
-            <input type="text" name="title" value={objective.title} onChange={handleObjectiveChange} className={titleInputClasses} placeholder="Objective Title..." required />
+        <div className="flex-shrink-0 mb-4 text-4xl">
+            <input type="text" name="title" value={objective.title} onChange={handleObjectiveChange} className={`${titleInputClasses} font-bold font-size-inherit`} placeholder="Objective Title..." required />
         </div>
         
         <div className="flex-grow overflow-y-auto space-y-2 -mr-2 pr-2">
@@ -149,7 +149,7 @@ const OkrForm = ({ isOpen, onClose, objectiveToEdit, currentQuarter }) => {
                                 </div>
                             )}
                         </div>
-                        <button type="button" onClick={() => setEditingKrId(null)} className="w-full text-center py-1.5 px-4 bg-emerald-600/50 text-white rounded-md text-sm font-medium hover:bg-emerald-600">Done</button>
+                        <button type="button" onClick={() => setEditingKrId(null)} className="w-full text-center py-1.5 px-4 text-white bg-indigo-600 hover:bg-indigo-700 rounded-md text-sm font-medium">Done</button>
                     </div>
                 ) : (
                     <div onClick={() => setEditingKrId(kr.id)} className="p-2 px-3 rounded-lg flex justify-between items-center cursor-pointer hover:bg-slate-700/50 text-slate-400 hover:text-slate-200">
