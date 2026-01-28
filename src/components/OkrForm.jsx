@@ -115,7 +115,7 @@ const OkrForm = ({ isOpen, onClose, objectiveToEdit, currentQuarter }) => {
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xl z-50 flex justify-center items-end sm:items-center p-0 sm:p-4">
       <div ref={modalRef} className="bg-slate-800/80 border border-slate-700/80 p-5 rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-lg max-h-[95vh] flex flex-col text-slate-300">
-        <div className="flex-shrink-0 mb-4 text-4xl">
+        <div className="flex-shrink-0 mb-4 text-3xl">
             <input type="text" name="title" value={objective.title} onChange={handleObjectiveChange} className={`${titleInputClasses} font-bold font-size-inherit`} placeholder="Objective Title..." required />
         </div>
         
