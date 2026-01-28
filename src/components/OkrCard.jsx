@@ -3,6 +3,7 @@ import { ChevronDown, Edit, Trash2 } from 'lucide-react';
 import { calculateObjectiveProgress } from '../utils/calculateProgress';
 import { useOkr } from '../contexts/OkrContext';
 import KrRow from './KrRow';
+import CircularProgress from './CircularProgress';
 
 const OkrCard = ({ objective, onEdit }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -10,19 +11,17 @@ const OkrCard = ({ objective, onEdit }) => {
   const progress = calculateObjectiveProgress(objective);
 
   return (
-    <div className="bg-slate-800 shadow-md rounded-lg mb-4 text-white">
+    <div className="bg-slate-800/80 backdrop-blur-sm border border-slate-700/50 shadow-2xl shadow-slate-950/50 rounded-xl mb-4 text-white">
       <div
         className="p-4 cursor-pointer"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex justify-between items-start">
-          <div>
-            <h3 className="text-lg font-bold mt-2 text-slate-100">{objective.title}</h3>
+          <div className='flex-grow pr-4'>
+            <h3 className="text-lg font-bold text-slate-100">{objective.title}</h3>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="text-right">
-                <span className="text-2xl font-bold text-slate-100">{progress}%</span>
-            </div>
+          <div className="flex items-center gap-4">
+            <CircularProgress progress={progress} />
             <ChevronDown
               className={`transform transition-transform text-slate-400 ${
                 isExpanded ? 'rotate-180' : ''
@@ -30,31 +29,25 @@ const OkrCard = ({ objective, onEdit }) => {
             />
           </div>
         </div>
-        <div className="relative pt-4">
-            <div className="overflow-hidden h-2 text-xs flex rounded bg-slate-700">
-                <div style={{ width: `${progress}%` }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-indigo-500"></div>
-            </div>
-        </div>
       </div>
 
       {isExpanded && (
         <div>
-          <div className="p-4 border-t border-slate-700">
-            <h4 className="font-semibold mb-2 text-slate-300">Key Results</h4>
+          <div className="pb-2 pt-0 px-4">
             {objective.krs.map((kr) => (
               <KrRow key={kr.id} kr={kr} objective={objective} />
             ))}
           </div>
-          <div className="p-4 bg-slate-900 flex justify-end gap-2">
+          <div className="p-2 px-4 bg-slate-900/50 rounded-b-xl flex justify-end gap-2">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit(objective);
               }}
-              className="w-11 h-11 flex items-center justify-center bg-indigo-600 text-white rounded-full hover:bg-indigo-700"
+              className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors"
               aria-label="Edit Objective"
             >
-              <Edit size={20} />
+              <Edit size={18} />
             </button>
             <button
               onClick={(e) => {
@@ -63,10 +56,10 @@ const OkrCard = ({ objective, onEdit }) => {
                     deleteObjective(objective.id)
                 }
               }}
-              className="w-11 h-11 flex items-center justify-center bg-red-600 text-white rounded-full hover:bg-red-700"
+              className="w-10 h-10 flex items-center justify-center bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
               aria-label="Delete Objective"
             >
-              <Trash2 size={20} />
+              <Trash2 size={18} />
             </button>
           </div>
         </div>
