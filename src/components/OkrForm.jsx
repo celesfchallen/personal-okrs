@@ -131,7 +131,15 @@ const OkrForm = ({ isOpen, onClose, objectiveToEdit, currentQuarter }) => {
                         <div className='grid grid-cols-2 gap-x-3 gap-y-2'>
                             <div><select name="type" value={kr.type} onChange={(e) => handleKrTypeChange(index, e.target.value)} className={regularInputClasses}><option value="numeric">Numeric</option><option value="boolean">Done/Not Done</option><option value="frequency">Frequency</option></select></div>
                             {kr.type === 'boolean' && <div />}
-                            {kr.type === 'frequency' && (<><input type="number" name="targetValue" value={kr.targetValue} onChange={(e) => handleKrChange(index, e)} className={regularInputClasses} placeholder="Times" /><select name="period" value={kr.period} onChange={(e) => handleKrChange(index, e)} className={regularInputClasses}><option value="weekly">per Week</option><option value="monthly">per Month</option></select></>)}
+                            {kr.type === 'frequency' && (
+                                <div className="col-span-2 grid grid-cols-2 gap-x-3">
+                                    <input type="number" name="targetValue" value={kr.targetValue} onChange={(e) => handleKrChange(index, e)} className={regularInputClasses} placeholder="Times" />
+                                    <select name="period" value={kr.period} onChange={(e) => handleKrChange(index, e)} className={regularInputClasses}>
+                                        <option value="weekly">per Week</option>
+                                        <option value="monthly">per Month</option>
+                                    </select>
+                                </div>
+                            )}
                             {kr.type === 'numeric' && (
                                 <div className="col-span-2 space-y-2">
                                     <div className="flex items-center gap-2">
