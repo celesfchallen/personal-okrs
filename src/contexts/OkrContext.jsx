@@ -100,6 +100,23 @@ export const OkrProvider = ({ children }) => {
     setOkrs(okrs.filter((objective) => objective.id !== objectiveId));
   };
 
+  const updateKr = (objectiveId, krId, updatedKrData) => {
+    setOkrs(okrs.map(objective => {
+      if (objective.id === objectiveId) {
+        return {
+          ...objective,
+          krs: objective.krs.map(kr => {
+            if (kr.id === krId) {
+              return { ...kr, ...updatedKrData };
+            }
+            return kr;
+          })
+        };
+      }
+      return objective;
+    }));
+  };
+
   return (
     <OkrContext.Provider
       value={{
@@ -108,6 +125,7 @@ export const OkrProvider = ({ children }) => {
         addObjective,
         updateObjective,
         deleteObjective,
+        updateKr,
       }}
     >
       {children}
